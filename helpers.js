@@ -1,18 +1,20 @@
-var pointLight, sun, moon, earth, earthOrbit, ring, controls, scene, camera, renderer, scene;
+var pointLight, sun, moon, satellite, earth, earthOrbit, moonRing, satelliteRing, controls, scene, camera, renderer, scene;
 var planetSegments = 48;
 var moonRadius = 1738; // km
 var earthRadius = 6378.1366; // km
 var sunRadius = 695700; // km
 var earthMoonDist = 384000; // km
-var earthSunDist = 149597870.700/80; // km , 80 is just to bring the sun closer 
-var earthData = constructPlanetData(365.2564, 0.015, earthSunDist/moonRadius, "earth", "img/earth.jpg", earthRadius/moonRadius, planetSegments);
-var moonData = constructPlanetData(29.5, 0.01, earthMoonDist/moonRadius, "moon", "img/moon.jpg", 1.0, planetSegments);
+var earthSunDist = 149597870.700 / 80; // km , 80 is just to bring the sun closer 
+var earthData = constructPlanetData(365.2564, 0.015, earthSunDist / moonRadius, "earth", "img/earth.jpg", earthRadius / moonRadius, planetSegments);
+var moonData = constructPlanetData(29.5, 0.01, earthMoonDist / moonRadius, "moon", "img/moon.jpg", 1.0, planetSegments);
 var satellite;
-var satelliteData = { 
-    orbitRate: 92.68/(24*60), 
-    distanceFromAxis: (410 + earthRadius)/moonRadius
+var satelliteData = {
+    //orbitRate: 92.68 / (24 * 60),
+    orbitRate: 29.5 * 2,
+    //distanceFromAxis: (410 + earthRadius) / moonRadius
+    distanceFromAxis: earthMoonDist / moonRadius * 0.5
 };
-var orbitData = {value: 200, runOrbit: true, runRotation: true};
+var orbitData = { value: 200, runOrbit: true, runRotation: true };
 var clock = new THREE.Clock();
 
 /**
@@ -50,7 +52,7 @@ function constructPlanetData(myOrbitRate, myRotationRate, myDistanceFromAxis, my
  */
 function getRing(size, innerDiameter, facets, myColor, name, distanceFromAxis) {
     var ring1Geometry = new THREE.RingGeometry(size, innerDiameter, facets);
-    var ring1Material = new THREE.MeshBasicMaterial({color: myColor, side: THREE.DoubleSide});
+    var ring1Material = new THREE.MeshBasicMaterial({ color: myColor, side: THREE.DoubleSide });
     var myRing = new THREE.Mesh(ring1Geometry, ring1Material);
     myRing.name = name;
     myRing.position.set(distanceFromAxis, 0, 0);
@@ -73,7 +75,7 @@ function getRing(size, innerDiameter, facets, myColor, name, distanceFromAxis) {
  */
 function getTube(size, innerDiameter, facets, myColor, name, distanceFromAxis) {
     var ringGeometry = new THREE.TorusGeometry(size, innerDiameter, facets, facets);
-    var ringMaterial = new THREE.MeshBasicMaterial({color: myColor, side: THREE.DoubleSide});
+    var ringMaterial = new THREE.MeshBasicMaterial({ color: myColor, side: THREE.DoubleSide });
     myRing = new THREE.Mesh(ringGeometry, ringMaterial);
     myRing.name = name;
     myRing.position.set(distanceFromAxis, 0, 0);
@@ -200,10 +202,10 @@ function movePlanet(myPlanet, myData, myTime, stopRotation) {
         myPlanet.rotation.y += myData.rotationRate;
     }
     if (orbitData.runOrbit) {
-        myPlanet.position.x = Math.cos(myTime*1.0/(myData.orbitRate*orbitData.value))
-                            * myData.distanceFromAxis; 
-        myPlanet.position.z = Math.sin(myTime*1.0/(myData.orbitRate*orbitData.value))
-                            * myData.distanceFromAxis; 
+        myPlanet.position.x = Math.cos(myTime * 1.0 / (myData.orbitRate * orbitData.value))
+            * myData.distanceFromAxis;
+        myPlanet.position.z = Math.sin(myTime * 1.0 / (myData.orbitRate * orbitData.value))
+            * myData.distanceFromAxis;
     }
 }
 
@@ -238,9 +240,15 @@ function update(renderer, scene, camera, controls) {
     var time = Date.now();
 
     movePlanet(earth, earthData, time);
-    movePlanet(ring, earthData, time, true);
+
+    movePlanet(moonRing, earthData, time, true);
     moveSat(moon, earth, moonData, time);
-    moveSat(satellite, earth, satelliteData, time);
+
+    if (satellite !== undefined) {
+        console.log("Been here")
+        moveSat(satellite, earth, satelliteData, time);
+        movePlanet(moonRing, earthData, time, true);
+    }
 
     renderer.render(scene, camera);
     requestAnimationFrame(function () {
@@ -253,8 +261,11 @@ function includeSatellite() {
     loader.load(
         './models/ISS_stationary.glb',
         (gltf) => {
+            gltf.scene.scale.set(new THREE.Vector3(1000, 1000, 1000));
+            gltf.scene.position.set(satelliteData.distanceFromAxis, 0, 0);
+
             satellite = gltf.scene;
-            scene.add(gltf.scene);
+            scene.add(satellite);
         },
         (xhr) => console.log(`${xhr.loaded / xhr.total * 100} % loaded...`),
         (err) => console.log(err));

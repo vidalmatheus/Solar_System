@@ -5,13 +5,13 @@
 function init() {
     // Create the camera that allows us to view into the scene.
     camera = new THREE.PerspectiveCamera(
-            70, // field of view
-            window.innerWidth / window.innerHeight, // aspect ratio
-            0.1, // near clipping plane
-            10000 // far clipping plane
-            );
+        70, // field of view
+        window.innerWidth / window.innerHeight, // aspect ratio
+        0.1, // near clipping plane
+        10000 // far clipping plane
+    );
     camera.position.z = 50;
-    camera.position.x = 1.2*earthData.distanceFromAxis;
+    camera.position.x = 1.2 * earthData.distanceFromAxis;
     camera.position.y = 100;
     camera.lookAt(new THREE.Vector3(0, 0, 0));
 
@@ -51,32 +51,33 @@ function init() {
     scene.add(ambientLight);
 
     // Create the sun.
-    var sunTexture = new THREE.TextureLoader().load( 'img/sun.jpg' );
-    var sunMaterial = getMaterial("basic", "rgb(255, 255, 255)",sunTexture);
-    sun = getSphere(sunMaterial, sunRadius/moonRadius, planetSegments);
+    var sunTexture = new THREE.TextureLoader().load('img/sun.jpg');
+    var sunMaterial = getMaterial("basic", "rgb(255, 255, 255)", sunTexture);
+    sun = getSphere(sunMaterial, sunRadius / moonRadius, planetSegments);
     scene.add(sun);
 
     // Create the glow of the sun.
     var spriteMaterial = new THREE.SpriteMaterial(
-            {
-                map: new THREE.ImageUtils.loadTexture("img/glow.png")
-                , useScreenCoordinates: false
-                , color: 0xffffee
-                , transparent: false
-                , blending: THREE.AdditiveBlending
-            });
+        {
+            map: new THREE.ImageUtils.loadTexture("img/glow.png")
+            , useScreenCoordinates: false
+            , color: 0xffffee
+            , transparent: false
+            , blending: THREE.AdditiveBlending
+        });
     var sprite = new THREE.Sprite(spriteMaterial);
-    sprite.scale.set(5*sunRadius/moonRadius, 5*sunRadius/moonRadius, 1.0);
+    sprite.scale.set(5 * sunRadius / moonRadius, 5 * sunRadius / moonRadius, 1.0);
     sun.add(sprite); // This centers the glow at the sun.
 
     // Create the Earth, the Moon, and a ring around the earth.
     earth = loadTexturedPlanet(earthData, earthData.distanceFromAxis, 0, 0);
     moon = loadTexturedPlanet(moonData, moonData.distanceFromAxis, 0, 0);
-    ring = getTube(earthMoonDist/moonRadius, 0.05, 480, 0xffffff, "ring", earthData.distanceFromAxis);
+    moonRing = getTube(earthMoonDist / moonRadius, 0.05, 480, 0xffffff, "ring", earthData.distanceFromAxis);
 
     // Include satellite 
     includeSatellite();
-    
+    satelliteRing = getTube(earthMoonDist / moonRadius * 0.5, 0.05, 480, 0xffffff, "ring", satelliteData.distanceFromAxis);
+
     // Create the visible orbit that the Earth uses.
     createVisibleOrbits();
 
