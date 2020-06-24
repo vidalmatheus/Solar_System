@@ -76,7 +76,7 @@ function init() {
 
     // Include satellite 
     includeSatellite();
-    satelliteRing = getTube(earthMoonDist / moonRadius * 0.5, 0.05, 480, 0xffffff, "ring", satelliteData.distanceFromAxis);
+    satelliteRing = getTube(earthSatDist / moonRadius, 0.005, 480, 0xffffff, "ring", earthData.distanceFromAxis);
 
     // Create the visible orbit that the Earth uses.
     createVisibleOrbits();

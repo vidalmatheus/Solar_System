@@ -8,11 +8,10 @@ var earthSunDist = 149597870.700 / 80; // km , 80 is just to bring the sun close
 var earthData = constructPlanetData(365.2564, 0.015, earthSunDist / moonRadius, "earth", "img/earth.jpg", earthRadius / moonRadius, planetSegments);
 var moonData = constructPlanetData(29.5, 0.01, earthMoonDist / moonRadius, "moon", "img/moon.jpg", 1.0, planetSegments);
 var satellite;
+var earthSatDist = 410 + earthRadius;
 var satelliteData = {
-    //orbitRate: 92.68 / (24 * 60),
-    orbitRate: 29.5 * 2,
-    //distanceFromAxis: (410 + earthRadius) / moonRadius
-    distanceFromAxis: earthMoonDist / moonRadius * 0.5
+    orbitRate: 92.68 / (24 * 60),
+    distanceFromAxis: 0.9*earthSunDist / moonRadius
 };
 var orbitData = { value: 200, runOrbit: true, runRotation: true };
 var clock = new THREE.Clock();
@@ -240,14 +239,12 @@ function update(renderer, scene, camera, controls) {
     var time = Date.now();
 
     movePlanet(earth, earthData, time);
-
-    movePlanet(moonRing, earthData, time, true);
     moveSat(moon, earth, moonData, time);
+    movePlanet(moonRing, earthData, time, true);
 
     if (satellite !== undefined) {
-        console.log("Been here")
         moveSat(satellite, earth, satelliteData, time);
-        movePlanet(moonRing, earthData, time, true);
+        movePlanet(satelliteRing, earthData, time, true);
     }
 
     renderer.render(scene, camera);
@@ -259,13 +256,14 @@ function update(renderer, scene, camera, controls) {
 function includeSatellite() {
     const loader = new THREE.GLTFLoader();
     loader.load(
-        './models/ISS_stationary.glb',
+        './models/New_Horizons.glb',
         (gltf) => {
-            gltf.scene.scale.set(new THREE.Vector3(1000, 1000, 1000));
+            gltf.scene.scale.set(1000, 1000, 1000);
             gltf.scene.position.set(satelliteData.distanceFromAxis, 0, 0);
-
+            
             satellite = gltf.scene;
             scene.add(satellite);
+            console.log("Satellite added!");
         },
         (xhr) => console.log(`${xhr.loaded / xhr.total * 100} % loaded...`),
         (err) => console.log(err));
