@@ -54,7 +54,7 @@ function init() {
     var sunTexture = new THREE.TextureLoader().load('img/sun.jpg');
     var sunMaterial = getMaterial("basic", "rgb(255, 255, 255)", sunTexture);
     sun = getSphere(sunMaterial, sunRadius / moonRadius, planetSegments);
-    scene.add(sun);
+    // scene.add(sun);
 
     // Create the glow of the sun.
     var spriteMaterial = new THREE.SpriteMaterial(
@@ -76,7 +76,7 @@ function init() {
 
     // Include satellite 
     includeSatellite();
-    satelliteRing = getTube(earthSatDist / moonRadius, 0.005, 480, 0xffffff, "ring", earthData.distanceFromAxis);
+    satelliteRing = getTube(earthSatDist / moonRadius, 0.05, 480, 0xffffff, "ring", earthData.distanceFromAxis);
 
     // Create the visible orbit that the Earth uses.
     createVisibleOrbits();

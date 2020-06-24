@@ -11,7 +11,7 @@ var satellite;
 var earthSatDist = 410 + earthRadius;
 var satelliteData = {
     orbitRate: 92.68 / (24 * 60),
-    distanceFromAxis: 0.9*earthSunDist / moonRadius
+    distanceFromAxis: earthData.distanceFromAxis - earthSatDist / moonRadius
 };
 var orbitData = { value: 200, runOrbit: true, runRotation: true };
 var clock = new THREE.Clock();
@@ -166,7 +166,7 @@ function loadTexturedPlanet(myData, x, y, z, myMaterialType) {
     var myPlanet = getSphere(myMaterial, myData.size, myData.segments);
     myPlanet.receiveShadow = true;
     myPlanet.name = myData.name;
-    scene.add(myPlanet);
+    // scene.add(myPlanet);
     myPlanet.position.set(x, y, z);
 
     return myPlanet;
@@ -258,7 +258,7 @@ function includeSatellite() {
     loader.load(
         './models/New_Horizons.glb',
         (gltf) => {
-            gltf.scene.scale.set(1000, 1000, 1000);
+            gltf.scene.scale.set(10, 10, 10);
             gltf.scene.position.set(satelliteData.distanceFromAxis, 0, 0);
             
             satellite = gltf.scene;
@@ -268,3 +268,4 @@ function includeSatellite() {
         (xhr) => console.log(`${xhr.loaded / xhr.total * 100} % loaded...`),
         (err) => console.log(err));
 }
+
