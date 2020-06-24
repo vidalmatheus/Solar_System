@@ -7,6 +7,11 @@ var earthMoonDist = 384000; // km
 var earthSunDist = 149597870.700/80; // km , 80 is just to bring the sun closer 
 var earthData = constructPlanetData(365.2564, 0.015, earthSunDist/moonRadius, "earth", "img/earth.jpg", earthRadius/moonRadius, planetSegments);
 var moonData = constructPlanetData(29.5, 0.01, earthMoonDist/moonRadius, "moon", "img/moon.jpg", 1.0, planetSegments);
+var satellite;
+var satelliteData = { 
+    orbitRate: 92.68/(24*60), 
+    distanceFromAxis: (410 + earthRadius)/moonRadius
+};
 var orbitData = {value: 200, runOrbit: true, runRotation: true};
 var clock = new THREE.Clock();
 
@@ -210,11 +215,11 @@ function movePlanet(myPlanet, myData, myTime, stopRotation) {
  * @param {type} myTime
  * @returns {undefined}
  */
-function moveMoon(myMoon, myPlanet, myData, myTime) {
-    movePlanet(myMoon, myData, myTime);
+function moveSat(mySat, myPlanet, myData, myTime) {
+    movePlanet(mySat, myData, myTime);
     if (orbitData.runOrbit) {
-        myMoon.position.x = myMoon.position.x + myPlanet.position.x;
-        myMoon.position.z = myMoon.position.z + myPlanet.position.z;
+        mySat.position.x = mySat.position.x + myPlanet.position.x;
+        mySat.position.z = mySat.position.z + myPlanet.position.z;
     }
 }
 
@@ -234,10 +239,23 @@ function update(renderer, scene, camera, controls) {
 
     movePlanet(earth, earthData, time);
     movePlanet(ring, earthData, time, true);
-    moveMoon(moon, earth, moonData, time);
+    moveSat(moon, earth, moonData, time);
+    moveSat(satellite, earth, satelliteData, time);
 
     renderer.render(scene, camera);
     requestAnimationFrame(function () {
         update(renderer, scene, camera, controls);
     });
+}
+
+function includeSatellite() {
+    const loader = new THREE.GLTFLoader();
+    loader.load(
+        './models/ISS_stationary.glb',
+        (gltf) => {
+            satellite = gltf.scene;
+            scene.add(gltf.scene);
+        },
+        (xhr) => console.log(`${xhr.loaded / xhr.total * 100} % loaded...`),
+        (err) => console.log(err));
 }

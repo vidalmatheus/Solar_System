@@ -74,6 +74,9 @@ function init() {
     moon = loadTexturedPlanet(moonData, moonData.distanceFromAxis, 0, 0);
     ring = getTube(earthMoonDist/moonRadius, 0.05, 480, 0xffffff, "ring", earthData.distanceFromAxis);
 
+    // Include satellite 
+    includeSatellite();
+    
     // Create the visible orbit that the Earth uses.
     createVisibleOrbits();
 
