@@ -21,6 +21,7 @@ function init() {
     // Create the renderer that controls animation.
     renderer = new THREE.WebGLRenderer({ antialias: true });
     renderer.setSize(window.innerWidth, window.innerHeight);
+    renderer.autoClearColor = false;
 
     // Attach the renderer to the div element.
     document.getElementById('webgl').appendChild(renderer.domElement);
@@ -29,7 +30,7 @@ function init() {
     controls = new THREE.OrbitControls(camera, renderer.domElement);
 
     // Load the images used in the background.
-    var path = 'cubemap/';
+    /*var path = 'cubemap/';
     var format = '.png';
     var urls = [
         path + 'px' + format, path + 'nx' + format,
@@ -40,7 +41,30 @@ function init() {
     reflectionCube.format = THREE.RGBFormat;
 
     // Attach the background cube to the scene.
-    scene.background = reflectionCube;
+    scene.background = reflectionCube;*/
+    bgScene = new THREE.Scene();
+    const vertShader = document.getElementById('vertexShader').innerHTML;
+    const fragShader = document.getElementById('fragmentShader').innerHTML;
+    const uniforms = {
+        time: {
+            type: 'f',
+            value: 0.0
+        },
+        bgtexture: {
+            type: 't',
+            value: new THREE.TextureLoader().load('./cubemap/sky.jpg')
+        }
+    };
+    const material = new THREE.ShaderMaterial({
+        uniforms: uniforms,
+        vertexShader: vertShader,
+        fragmentShader: fragShader,
+        depthWrite: false,
+        side: THREE.BackSide,
+    });
+    const plane = new THREE.BoxBufferGeometry(2, 2, 2);
+    bgMesh = new THREE.Mesh(plane, material)
+    bgScene.add(bgMesh)
 
     // Create light from the sun.
     pointLight = getPointLight(5, "rgb(255, 220, 180)");
@@ -54,7 +78,7 @@ function init() {
     var sunTexture = new THREE.TextureLoader().load('img/sun.jpg');
     var sunMaterial = getMaterial("basic", "rgb(255, 255, 255)", sunTexture);
     sun = getSphere(sunMaterial, sunRadius / moonRadius, planetSegments);
-    // scene.add(sun);
+    scene.add(sun);
 
     // Create the glow of the sun.
     var spriteMaterial = new THREE.SpriteMaterial(
@@ -74,22 +98,38 @@ function init() {
     moon = loadTexturedPlanet(moonData, moonData.distanceFromAxis, 0, 0);
     moonRing = getTube(earthMoonDist / moonRadius, 0.05, 480, 0xffffff, "ring", earthData.distanceFromAxis);
 
-    // Include satellite 
-    includeSatellite();
-    satelliteRing = getTube(earthSatDist / moonRadius, 0.05, 480, 0xffffff, "ring", earthData.distanceFromAxis);
-
     // Create the visible orbit that the Earth uses.
     createVisibleOrbits();
 
     // Create the GUI that displays controls.
     var gui = new dat.GUI();
-    var folder1 = gui.addFolder('light');
+    var folder1 = gui.addFolder('Light');
     folder1.add(pointLight, 'intensity', 0, 10);
-    var folder2 = gui.addFolder('speed');
+    var folder2 = gui.addFolder('Speed');
     folder2.add(orbitData, 'value', 0, 600);
     folder2.add(orbitData, 'runOrbit', 0, 1);
     folder2.add(orbitData, 'runRotation', 0, 1);
-
+    var obj = {};
+    obj.Hubble = function() {
+      window.open("hubble.html");
+    }
+    obj.Cassini = function() {
+        window.open("cassini.html");
+    }
+    obj.ISS = function() {
+    window.open("iss.html");
+    }
+    obj.NewHorizons = function() {
+        window.open("newHorizons.html");
+    }
+    obj.Voyager = function() {
+        window.open("voyager.html");
+    }
+    gui.add(obj, 'Hubble');
+    gui.add(obj, 'Cassini');
+    gui.add(obj, 'ISS');
+    gui.add(obj, 'NewHorizons');
+    gui.add(obj, 'Voyager');
     // Start the animation.
     update(renderer, scene, camera, controls);
 }

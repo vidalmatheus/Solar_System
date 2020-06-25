@@ -1,4 +1,5 @@
-var pointLight, sun, moon, satellite, earth, earthOrbit, moonRing, satelliteRing, controls, scene, camera, renderer, scene;
+var controls, scene, camera, renderer, bgScene, bgMesh;
+var pointLight, sun, moon, satellite, earth, earthOrbit, moonRing;
 var planetSegments = 48;
 var moonRadius = 1738; // km
 var earthRadius = 6378.1366; // km
@@ -7,14 +8,9 @@ var earthMoonDist = 384000; // km
 var earthSunDist = 149597870.700 / 80; // km , 80 is just to bring the sun closer 
 var earthData = constructPlanetData(365.2564, 0.015, earthSunDist / moonRadius, "earth", "img/earth.jpg", earthRadius / moonRadius, planetSegments);
 var moonData = constructPlanetData(29.5, 0.01, earthMoonDist / moonRadius, "moon", "img/moon.jpg", 1.0, planetSegments);
-var satellite;
-var earthSatDist = 410 + earthRadius;
-var satelliteData = {
-    orbitRate: 92.68 / (24 * 60),
-    distanceFromAxis: earthData.distanceFromAxis - earthSatDist / moonRadius
-};
 var orbitData = { value: 200, runOrbit: true, runRotation: true };
 var clock = new THREE.Clock();
+var beginOfTime = Date.now();
 
 /**
  * This eliminates the redundance of having to type property names for a planet object.
@@ -166,7 +162,7 @@ function loadTexturedPlanet(myData, x, y, z, myMaterialType) {
     var myPlanet = getSphere(myMaterial, myData.size, myData.segments);
     myPlanet.receiveShadow = true;
     myPlanet.name = myData.name;
-    // scene.add(myPlanet);
+    scene.add(myPlanet);
     myPlanet.position.set(x, y, z);
 
     return myPlanet;
@@ -233,39 +229,21 @@ function moveSat(mySat, myPlanet, myData, myTime) {
  * @returns {undefined}
  */
 function update(renderer, scene, camera, controls) {
+    const time = Date.now();
+
+    bgMesh.material.uniforms.time.value = (time - beginOfTime) / 1000.0;
+    bgMesh.position.copy(camera.position);
+    renderer.render(bgScene, camera);
+
     pointLight.position.copy(sun.position);
     controls.update();
-
-    var time = Date.now();
 
     movePlanet(earth, earthData, time);
     moveSat(moon, earth, moonData, time);
     movePlanet(moonRing, earthData, time, true);
-
-    if (satellite !== undefined) {
-        moveSat(satellite, earth, satelliteData, time);
-        movePlanet(satelliteRing, earthData, time, true);
-    }
 
     renderer.render(scene, camera);
     requestAnimationFrame(function () {
         update(renderer, scene, camera, controls);
     });
 }
-
-function includeSatellite() {
-    const loader = new THREE.GLTFLoader();
-    loader.load(
-        './models/New_Horizons.glb',
-        (gltf) => {
-            gltf.scene.scale.set(10, 10, 10);
-            gltf.scene.position.set(satelliteData.distanceFromAxis, 0, 0);
-            
-            satellite = gltf.scene;
-            scene.add(satellite);
-            console.log("Satellite added!");
-        },
-        (xhr) => console.log(`${xhr.loaded / xhr.total * 100} % loaded...`),
-        (err) => console.log(err));
-}
-
