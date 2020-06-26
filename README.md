@@ -1,6 +1,8 @@
 # Solar_System
 Basic Solar System developed with Three.js. 
 
+# https://vidalmatheus.github.io/solar_system/
+
 Inspired by https://www.youtube.com/watch?v=7VaAIVqu_P0
 
 ## Installation
