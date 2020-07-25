@@ -124,7 +124,7 @@ const sceneBuilder = (modelName) => {
     var gui = new dat.GUI();
     var obj = {};
     obj.SolarSystem = function () {
-        window.open("/")
+        window.open("./")
     }
     var folder2 = gui.addFolder('Simulation');
     folder2.open();
