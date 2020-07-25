@@ -1,138 +1,192 @@
-/**
- * This is the function that starts everything.
- * @returns {THREE.Scene|scene}
- */
-function init() {
-    // Create the camera that allows us to view into the scene.
-    camera = new THREE.PerspectiveCamera(
-        70, // field of view
-        window.innerWidth / window.innerHeight, // aspect ratio
-        0.1, // near clipping plane
-        10000 // far clipping plane
-    );
-    camera.position.z = 50;
-    camera.position.x = 1.2 * earthData.distanceFromAxis;
-    camera.position.y = 100;
-    camera.lookAt(new THREE.Vector3(0, 0, 0));
+import { scene, bgScene, camera, renderer, controls } from "./setup.js";
+import { getPointLight } from "./src/utils.js";
 
-    // Create the scene that holds all of the visible objects.
-    scene = new THREE.Scene();
+import SolarSystem from "./src/SolarSystem.js";
 
-    // Create the renderer that controls animation.
-    renderer = new THREE.WebGLRenderer({ antialias: true });
-    renderer.setSize(window.innerWidth, window.innerHeight);
-    renderer.autoClearColor = false;
+import {
+  numSphereSegments,
+  earthSunDist,
+  earthMoonDist,
+  earthRadius,
+  moonRadius,
+} from "./src/constants.js";
 
-    // Attach the renderer to the div element.
-    document.getElementById('webgl').appendChild(renderer.domElement);
+const beginOfTime = Date.now();
 
-    // Create controls that allows a user to move the scene with a mouse.
-    controls = new THREE.OrbitControls(camera, renderer.domElement);
+const buildBackground = (bgScene) => {
+  const vertShader = document.getElementById("vertexShader").innerHTML;
+  const fragShader = document.getElementById("fragmentShader").innerHTML;
+  const uniforms = {
+    time: {
+      type: "f",
+      value: 0.0,
+    },
+    bgtexture: {
+      type: "t",
+      value: new THREE.TextureLoader().load("./cubemap/sky.jpg"),
+    },
+  };
+  const material = new THREE.ShaderMaterial({
+    uniforms: uniforms,
+    vertexShader: vertShader,
+    fragmentShader: fragShader,
+    depthWrite: false,
+    side: THREE.BackSide,
+  });
+  const plane = new THREE.BoxBufferGeometry(2, 2, 2);
+  const bgMesh = new THREE.Mesh(plane, material);
+  bgScene.add(bgMesh);
 
-    // Load the images used in the background.
-    /*var path = 'cubemap/';
-    var format = '.png';
-    var urls = [
-        path + 'px' + format, path + 'nx' + format,
-        path + 'py' + format, path + 'ny' + format,
-        path + 'pz' + format, path + 'nz' + format
-    ];
-    var reflectionCube = new THREE.CubeTextureLoader().load(urls);
-    reflectionCube.format = THREE.RGBFormat;
+  return bgMesh;
+};
 
-    // Attach the background cube to the scene.
-    scene.background = reflectionCube;*/
-    bgScene = new THREE.Scene();
-    const vertShader = document.getElementById('vertexShader').innerHTML;
-    const fragShader = document.getElementById('fragmentShader').innerHTML;
-    const uniforms = {
-        time: {
-            type: 'f',
-            value: 0.0
-        },
-        bgtexture: {
-            type: 't',
-            value: new THREE.TextureLoader().load('./cubemap/sky.jpg')
-        }
-    };
-    const material = new THREE.ShaderMaterial({
-        uniforms: uniforms,
-        vertexShader: vertShader,
-        fragmentShader: fragShader,
-        depthWrite: false,
-        side: THREE.BackSide,
-    });
-    const plane = new THREE.BoxBufferGeometry(2, 2, 2);
-    bgMesh = new THREE.Mesh(plane, material)
-    bgScene.add(bgMesh)
+const buildGUI = (pointLight, backgroundLight, solarSystem) => {
+  // Create the GUI that displays controls.
+  const gui = new dat.GUI();
 
-    // Create light from the sun.
-    pointLight = getPointLight(5, "rgb(255, 220, 180)");
-    scene.add(pointLight);
+  const lightFolder = gui.addFolder("Luminosity");
+  lightFolder.add(pointLight, "intensity", 0, 1, 0.1).name('Sunlight');
+  lightFolder.add(backgroundLight, "intensity", 0, 1, 0.1).name('Background');
 
-    // Create light that is viewable from all directions.
-    var ambientLight = new THREE.AmbientLight(0xaaaaaa);
-    scene.add(ambientLight);
+  const speedFolder = gui.addFolder("Movement");
+  speedFolder.add(solarSystem.orbitData, "speedFactor", -3, 3, 0.01).name('Speed Factor');
+  speedFolder.add(solarSystem.orbitData, "runOrbit").name('Run Orbit?');
+  speedFolder.add(solarSystem.orbitData, "runRotation").name('Run Rotation?');
 
-    // Create the sun.
-    var sunTexture = new THREE.TextureLoader().load('img/sun.jpg');
-    var sunMaterial = getMaterial("basic", "rgb(255, 255, 255)", sunTexture);
-    sun = getSphere(sunMaterial, sunRadius / moonRadius, planetSegments);
-    scene.add(sun);
+  const spacecraftLinks = {
+    Hubble: () => window.open("hubble.html"),
+    Cassini: () => window.open("cassini.html"),
+    ISS: () => window.open("iss.html"),
+    "New Horizons": () => window.open("newHorizons.html"),
+    Voyager: () => window.open("voyager.html"),
+  };
+  const spacecraftFolder = gui.addFolder("Spacecraft");
+  spacecraftFolder.add(spacecraftLinks, "Hubble");
+  spacecraftFolder.add(spacecraftLinks, "Cassini");
+  spacecraftFolder.add(spacecraftLinks, "ISS");
+  spacecraftFolder.add(spacecraftLinks, "New Horizons");
+  spacecraftFolder.add(spacecraftLinks, "Voyager");
 
-    // Create the glow of the sun.
-    var spriteMaterial = new THREE.SpriteMaterial(
-        {
-            map: new THREE.ImageUtils.loadTexture("img/glow.png")
-            , useScreenCoordinates: false
-            , color: 0xffffee
-            , transparent: false
-            , blending: THREE.AdditiveBlending
-        });
-    var sprite = new THREE.Sprite(spriteMaterial);
-    sprite.scale.set(5 * sunRadius / moonRadius, 5 * sunRadius / moonRadius, 1.0);
-    sun.add(sprite); // This centers the glow at the sun.
+  const planetsFolder = gui.addFolder("Planets");
+  planetsFolder.closed = false;
+  const planetHandler = {
+    Mercury: () => solarSystem.navigateTo("mercury"),
+    Venus: () => solarSystem.navigateTo("venus"),
+    Earth: () => solarSystem.navigateTo("earth"),
+    Mars: () => solarSystem.navigateTo("mars"),
+    Jupiter: () => solarSystem.navigateTo("jupiter"),
+    Saturn: () => solarSystem.navigateTo("saturn"),
+    Uranus: () => solarSystem.navigateTo("uranus"),
+    Neptune: () => solarSystem.navigateTo("neptune"),
+  };
+  planetsFolder.add(planetHandler, "Mercury");
+  planetsFolder.add(planetHandler, "Venus");
+  planetsFolder.add(planetHandler, "Earth");
+  planetsFolder.add(planetHandler, "Mars");
+  planetsFolder.add(planetHandler, "Jupiter");
+  planetsFolder.add(planetHandler, "Saturn");
+  planetsFolder.add(planetHandler, "Uranus");
+  planetsFolder.add(planetHandler, "Neptune");
 
-    // Create the Earth, the Moon, and a ring around the earth.
-    earth = loadTexturedPlanet(earthData, earthData.distanceFromAxis, 0, 0);
-    moon = loadTexturedPlanet(moonData, moonData.distanceFromAxis, 0, 0);
-    moonRing = getTube(earthMoonDist / moonRadius, 0.05, 480, 0xffffff, "ring", earthData.distanceFromAxis);
+  return gui;
+};
 
-    // Create the visible orbit that the Earth uses.
-    createVisibleOrbits();
+const buildLights = (scene) => {
+  // Create light from the sun.
+  const pointLight = getPointLight(1, "rgb(255, 220, 180)");
+  scene.add(pointLight);
 
-    // Create the GUI that displays controls.
-    var gui = new dat.GUI();
-    var folder1 = gui.addFolder('Light');
-    folder1.add(pointLight, 'intensity', 0, 10);
-    var folder2 = gui.addFolder('Speed');
-    folder2.add(orbitData, 'value', 0, 600);
-    folder2.add(orbitData, 'runOrbit', 0, 1);
-    folder2.add(orbitData, 'runRotation', 0, 1);
-    var obj = {};
-    obj.Hubble = function() {
-      window.open("hubble.html");
-    }
-    obj.Cassini = function() {
-        window.open("cassini.html");
-    }
-    obj.ISS = function() {
-    window.open("iss.html");
-    }
-    obj.NewHorizons = function() {
-        window.open("newHorizons.html");
-    }
-    obj.Voyager = function() {
-        window.open("voyager.html");
-    }
-    gui.add(obj, 'Hubble');
-    gui.add(obj, 'Cassini');
-    gui.add(obj, 'ISS');
-    gui.add(obj, 'NewHorizons');
-    gui.add(obj, 'Voyager');
-    // Start the animation.
-    update(renderer, scene, camera, controls);
+  // Create light that is viewable from all directions.
+  const ambientLight = new THREE.AmbientLight(0xaaaaaa, 0.5);
+  scene.add(ambientLight);
+
+  return [pointLight, ambientLight];
+};
+
+const setCameraPosition = (camera, cameraDistance) => {
+  camera.position.z = 50;
+  camera.position.x = 1.2 * cameraDistance;
+  camera.position.y = 100;
+  camera.lookAt(new THREE.Vector3(0, 0, 0));
+};
+
+const setMouse = () => {
+  const mouse = new THREE.Vector2();
+
+  const handler = (event) => {
+    mouse.x = (event.clientX / window.innerWidth) * 2 - 1;
+    mouse.y = -(event.clientY / window.innerHeight) * 2 + 1;
+  };
+  window.addEventListener("mousemove", handler, false);
+
+  return mouse;
+};
+
+const getDataFromApi = async (bodyName) => {
+  const promise = fetch(
+    "https://api.le-systeme-solaire.net/rest/bodies?filter[]=englishName,eq," +
+    bodyName +
+    "&data=meanRadius,mass,massValue,massExponent,gravity,escape,sideralOrbit,sideralRotation,moons,aphelion,perihelion"
+  );
+
+  const response = await promise;
+
+  return {
+    "name": bodyName,
+    "data": await response.json()
+  }
 }
 
-// Start everything.
-init();
+const main = async () => {
+  const bgMesh = buildBackground(bgScene);
+
+  const [pointLight, backgroundLight] = buildLights(scene);
+
+  const mouse = setMouse();
+
+  const promises = SolarSystem.planetsNames.map(name => getDataFromApi(name));
+  const rawData = await Promise.all(promises);
+  const data = rawData.map((payload) => {
+    const planetData = new PlanetDataFromAPI(payload.name);
+    planetData.inicia(payload.data.bodies[0]);
+    return planetData;
+  });
+  const solarSystem = new SolarSystem(scene, camera, mouse, controls, data);
+
+  const gui = buildGUI(pointLight, backgroundLight, solarSystem);
+
+  setCameraPosition(camera, solarSystem.cameraInitialDistance());
+
+  const update = () => {
+    const time = Date.now() - beginOfTime;
+
+    solarSystem.update(time);
+
+    // Twinkling the stars
+    bgMesh.material.uniforms.time.value = time / 1000.0;
+    bgMesh.position.copy(camera.position);
+    renderer.render(bgScene, camera);
+
+    // Tracking the sun position
+    pointLight.position.copy(solarSystem.sun.position);
+
+    solarSystem.update(time);
+
+    renderer.render(scene, camera);
+
+    const fps = 60;
+    const period = 1000 / fps;
+    requestAnimationFrame(() => {
+      const current = Date.now() - beginOfTime - time;
+      if (current >= period) update();
+      else {
+        setTimeout(update, period - current);
+      }
+    });
+  };
+
+  // Start the animation.
+  update();
+};
+
+export default main;
